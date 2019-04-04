@@ -42,6 +42,6 @@ public class ValidationUtils {
 	}
 
 	public static Double getMutationValue(String mutationValue) {
-		return Double.valueOf(mutationValue.substring(1));
+		return Double.valueOf(mutationValue);
 	}
 }

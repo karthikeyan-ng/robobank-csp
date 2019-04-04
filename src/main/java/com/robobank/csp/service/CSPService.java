@@ -3,7 +3,11 @@
  */
 package com.robobank.csp.service;
 
+import java.util.List;
+
 import org.springframework.web.multipart.MultipartFile;
+
+import com.robobank.csp.data.ValidationResponse;
 
 /**
  * @author Karthikeyan N
@@ -11,6 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public interface CSPService {
 
-	void validateAndProcess(MultipartFile file);
+	List<ValidationResponse> validateAndProcess(MultipartFile file);
 
 }
