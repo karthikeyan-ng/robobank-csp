@@ -4,11 +4,11 @@ package com.robobank.csp.exception;
  * @author NKARTH35
  *
  */
-public class FileNotSupportedException extends RuntimeException {
+public class InvalidFieldLengthException extends RuntimeException {
 
 	private static final long serialVersionUID = -9034905337171386170L;
 
-	public FileNotSupportedException(String message) {
+	public InvalidFieldLengthException(String message) {
 		super(message);
 	}
 }

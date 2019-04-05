@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.robobank.csp.process;
 
 import java.io.BufferedReader;
@@ -13,9 +10,13 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.robobank.csp.data.Record;
+import com.robobank.csp.exception.ExceptionMessage;
+import com.robobank.csp.exception.InvalidFieldLengthException;
 import com.robobank.csp.utils.ValidationUtils;
 
 /**
+ * Implementation of {@link DataImporter}
+ * 
  * @author Karthikeyan N
  *
  */
@@ -32,7 +33,9 @@ public class CsvImporter implements DataImporter {
             InputStream inputStream = file.getInputStream();
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
 
-            br.lines().skip(1).forEachOrdered(line -> {
+            br.lines()
+              .skip(1)	//skip header row
+              .forEachOrdered(line -> {
             	
             	String[] tokens = line.split(CSV_SPLIT_BY);
                 if(tokens.length == 6) {
@@ -45,6 +48,8 @@ public class CsvImporter implements DataImporter {
                 	record.setMutationValue(ValidationUtils.getMutationValue(tokens[4]));
                 	record.setEndBalance(Double.parseDouble(tokens[5]));
                 	records.add(record);
+                } else {
+                	throw new InvalidFieldLengthException(String.format(ExceptionMessage.INVALID_CSV_LINE, line));
                 }
             });
             

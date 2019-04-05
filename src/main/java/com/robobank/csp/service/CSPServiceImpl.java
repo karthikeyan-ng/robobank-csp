@@ -1,12 +1,11 @@
-/**
- * 
- */
 package com.robobank.csp.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -18,6 +17,8 @@ import com.robobank.csp.process.DataImporter;
 import com.robobank.csp.process.DataProcessorFactory;
 
 /**
+ * Implementation of {@link CSPService}
+ * 
  * @author Karthikeyan N
  *
  */
@@ -25,15 +26,28 @@ import com.robobank.csp.process.DataProcessorFactory;
 public class CSPServiceImpl implements CSPService {
 
 	@Override
-	public List<ValidationResponse> validateAndProcess(MultipartFile file) {
+	public List<ValidationResponse> readAndValidate(MultipartFile file) {
 		
 		DataImporter importer = DataProcessorFactory.getFactory(file.getOriginalFilename());
 		List<Record> records = importer.doImport(file);
 		
-		//all transaction references should be unique
-		Map<Long, List<Record>> groupByTransactionRef = 
-				records.stream()
-	    				 .collect(Collectors.groupingBy(record -> record.getTransactionReference()));
+		List<Record> validationResults = new ArrayList<>();
+		validationResults.addAll(collectDuplicateTransactionReferences(records));
+		validationResults.addAll(validateRecordEndBalance(records));
+		
+		//prepare response
+		return validationResults.stream().map(ValidationResponse::new).collect(Collectors.toList());
+	}
+
+	/**
+	 * Validate and collect Duplicate Transaction references records
+	 * 
+	 * @param records
+	 * @return
+	 */
+	private List<Record> collectDuplicateTransactionReferences(List<Record> records) {
+		Map<Long, List<Record>> groupByTransactionRef = records.stream()
+				.collect(Collectors.groupingBy(record -> record.getTransactionReference()));
 		
 		List<Record> validationResults = new ArrayList<>();
 		groupByTransactionRef.forEach((k, v) -> {
@@ -41,18 +55,29 @@ public class CSPServiceImpl implements CSPService {
 				validationResults.addAll(v);
 			}
 		});
-	
-		//the end balance needs to be validated
-		records.stream().forEach(record -> {
-			double balanceValue = new BigDecimal(record.getStartBalance()).add(new BigDecimal(record.getMutationValue())).doubleValue();
-			if(balanceValue < 0.0d && record.getEndBalance() < 0.0d) {
-				validationResults.add(record);
-			}
-		});
 		
-		//prepare response
-		return validationResults.stream().map(ValidationResponse::new).collect(Collectors.toList());
-		
+		return validationResults;
 	}
+	
+	/**
+	 * While making transaction validate the transaction (Start Balance - Mutation
+	 * Value = End Balance). End Balance should not be a NEGATIVE amount.
+	 * 
+	 * @param records
+	 * @return
+	 */
+	private List<Record> validateRecordEndBalance(List<Record> records) {
+		Function<Record, Record> functionToValidateTransactionAmount = record -> {
+			double balanceValue = new BigDecimal(record.getStartBalance())
+					.add(new BigDecimal(record.getMutationValue())).doubleValue();
+			if (balanceValue < 0.0d && record.getEndBalance() < 0.0d)
+				return record;
+			return null;
+		};
 
+		return records.stream()
+					  .map(functionToValidateTransactionAmount)
+					  .filter(Objects::nonNull)
+					  .collect(Collectors.toList());
+	}
 }
